@@ -1,28 +1,44 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import type { LookupItem, StageName } from "@/lib/types";
+import type { Project, LookupItem, StageName } from "@/lib/types";
 
-export default function NewProjectPage() {
-  const router = useRouter();
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [benefit, setBenefit] = useState("");
-  const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
-  const [endDate, setEndDate] = useState("");
-  const [stage, setStage] = useState<StageName>("Idea");
-  const [tags, setTags] = useState<string[]>([]);
+interface Props {
+  project: Project;
+  onSaved: () => void;
+}
+
+export function ProjectEditForm({ project, onSaved }: Props) {
+  const [name, setName] = useState(project.name);
+  const [description, setDescription] = useState(project.description);
+  const [benefit, setBenefit] = useState(project.benefit);
+  const [startDate, setStartDate] = useState(project.startDate);
+  const [endDate, setEndDate] = useState(project.endDate);
+  const [stage, setStage] = useState<StageName>(project.stage);
+  const [tags, setTags] = useState<string[]>(project.tags);
+  const [saving, setSaving] = useState(false);
   const [stages, setStages] = useState<LookupItem[]>([]);
   const [allTags, setAllTags] = useState<LookupItem[]>([]);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
 
   useEffect(() => {
     api.listStages().then(setStages);
     api.listTags().then(setAllTags);
   }, []);
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      await api.updateProject(project.id, {
+        name, description, benefit, startDate, endDate, stage, tags,
+      });
+      onSaved();
+    } catch {
+      // handle error
+    } finally {
+      setSaving(false);
+    }
+  }
 
   function toggleTag(tagName: string) {
     setTags((prev) =>
@@ -30,26 +46,10 @@ export default function NewProjectPage() {
     );
   }
 
-  async function handleCreate() {
-    if (!name.trim()) { setError("Name is required"); return; }
-    setSubmitting(true);
-    setError("");
-    try {
-      await api.createProject({ name, description, benefit, startDate, endDate, stage, tags });
-      router.push("/projects");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create project");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
   return (
-    <div className="p-4 space-y-4">
-      <h1 className="text-2xl font-bold">New Project</h1>
-
+    <div className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
         <input value={name} onChange={(e) => setName(e.target.value)}
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
       </div>
@@ -105,12 +105,10 @@ export default function NewProjectPage() {
         </div>
       </div>
 
-      <button onClick={handleCreate} disabled={submitting}
+      <button onClick={handleSave} disabled={saving}
         className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold disabled:opacity-50">
-        {submitting ? "Creating..." : "Create Project"}
+        {saving ? "Saving..." : "Save Changes"}
       </button>
-
-      {error && <p className="text-red-500 text-sm">{error}</p>}
     </div>
   );
 }
