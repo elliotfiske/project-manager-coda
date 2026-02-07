@@ -6,7 +6,9 @@ const useMemory = !process.env.KV_REST_API_URL;
 
 export async function kvGet(key: string): Promise<string | null> {
   if (useMemory) return memoryStore.get(key) || null;
-  return kv.get(key);
+  const value = await kv.get(key);
+  // Upstash returns parsed objects, but we need strings for JSON.parse consistency
+  return value === null ? null : typeof value === "string" ? value : JSON.stringify(value);
 }
 
 export async function kvSet(key: string, value: string): Promise<void> {
