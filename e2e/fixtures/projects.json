@@ -1,0 +1,46 @@
+[
+  {
+    "id": "i-active-1",
+    "name": "Build Mobile App",
+    "description": "Create a mobile-first project manager webapp",
+    "benefit": "Access project data without Coda crashing",
+    "startDate": "2026-02-01",
+    "endDate": "2026-02-28",
+    "stage": "Active",
+    "tags": ["Personal"],
+    "recentStatus": "On track"
+  },
+  {
+    "id": "i-planned-1",
+    "name": "Learn Rust",
+    "description": "Work through the Rust book",
+    "benefit": "Expand programming skills",
+    "startDate": "2026-03-01",
+    "endDate": "2026-04-30",
+    "stage": "Planned",
+    "tags": ["Fun", "Personal"],
+    "recentStatus": null
+  },
+  {
+    "id": "i-complete-1",
+    "name": "Tax Prep 2025",
+    "description": "Gather documents and file taxes",
+    "benefit": "Legal compliance and potential refund",
+    "startDate": "2026-01-15",
+    "endDate": "2026-01-31",
+    "stage": "Complete",
+    "tags": ["Life360"],
+    "recentStatus": "On track"
+  },
+  {
+    "id": "i-idea-1",
+    "name": "Garden Redesign",
+    "description": "Plan and execute backyard garden renovation",
+    "benefit": "Better outdoor space",
+    "startDate": "2026-05-01",
+    "endDate": "2026-06-15",
+    "stage": "Idea",
+    "tags": ["Physical", "Fun"],
+    "recentStatus": null
+  }
+]
