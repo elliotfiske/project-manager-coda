@@ -1,0 +1,23 @@
+[
+  {
+    "id": "i-su-1",
+    "date": "2026-02-06",
+    "status": "On track",
+    "update": "Set up the Next.js project scaffold",
+    "initiativeId": "Build Mobile App"
+  },
+  {
+    "id": "i-su-2",
+    "date": "2026-02-05",
+    "status": "On track",
+    "update": "Finished the design doc and brainstorming",
+    "initiativeId": "Build Mobile App"
+  },
+  {
+    "id": "i-su-3",
+    "date": "2026-02-04",
+    "status": "At risk",
+    "update": "Spent most of the day on other things",
+    "initiativeId": "Build Mobile App"
+  }
+]
