@@ -33,7 +33,8 @@ export default function LoginPage() {
         throw new Error(data.error || "Login failed");
       }
 
-      router.push("/");
+      // Force full page reload to ensure middleware picks up new session cookie
+      window.location.href = "/";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {

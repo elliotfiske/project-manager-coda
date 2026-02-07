@@ -41,7 +41,7 @@ export default function SetupPage() {
       }
 
       setSuccess(true);
-      setTimeout(() => router.push("/"), 2000);
+      setTimeout(() => { window.location.href = "/"; }, 2000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");
     } finally {
