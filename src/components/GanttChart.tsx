@@ -6,6 +6,23 @@ import { Gantt, Task, ViewMode } from "gantt-task-react";
 import "gantt-task-react/dist/index.css";
 import type { Project } from "@/lib/types";
 
+function fmtDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function Tooltip({ task, fontSize, fontFamily }: { task: Task; fontSize: string; fontFamily: string }) {
+  return (
+    <div style={{ padding: "8px 12px", fontSize, fontFamily, background: "#fff", boxShadow: "0 2px 8px rgba(0,0,0,0.15)", borderRadius: 4 }}>
+      <b>{task.name}</b>
+      <br />
+      {fmtDate(task.start)} — {fmtDate(task.end)}
+    </div>
+  );
+}
+
 const stageColors: Record<string, string> = {
   Active: "#3b82f6",
   Planned: "#a78bfa",
@@ -22,11 +39,18 @@ interface Props {
 export function GanttChart({ projects }: Props) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
-  const [height, setHeight] = useState(0);
+  const [height, setHeight] = useState(400); // Default fallback height
 
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
+
+    // Set initial height from current dimensions
+    const rect = el.getBoundingClientRect();
+    if (rect.height > 0) {
+      setHeight(Math.floor(rect.height));
+    }
+
     const obs = new ResizeObserver(([entry]) => {
       setHeight(Math.floor(entry.contentRect.height));
     });
@@ -67,6 +91,7 @@ export function GanttChart({ projects }: Props) {
           listCellWidth=""
           ganttHeight={height}
           columnWidth={50}
+          TooltipContent={Tooltip}
         />
       )}
     </div>
