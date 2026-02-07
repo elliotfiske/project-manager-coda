@@ -3,6 +3,28 @@ import type { Project, StatusUpdate, LookupItem, CreateProjectRequest, UpdatePro
 
 const TOKEN = process.env.CODA_API_TOKEN!;
 
+// Simple in-memory cache with TTL
+const cache = new Map<string, { data: unknown; expires: number }>();
+const CACHE_TTL = 30_000; // 30 seconds
+
+function getCached<T>(key: string): T | undefined {
+  const entry = cache.get(key);
+  if (entry && Date.now() < entry.expires) return entry.data as T;
+  cache.delete(key);
+  return undefined;
+}
+
+function setCache(key: string, data: unknown) {
+  cache.set(key, { data, expires: Date.now() + CACHE_TTL });
+}
+
+function invalidateCache(prefix?: string) {
+  if (!prefix) { cache.clear(); return; }
+  for (const key of cache.keys()) {
+    if (key.startsWith(prefix)) cache.delete(key);
+  }
+}
+
 async function codaFetch(path: string, options: RequestInit = {}) {
   const res = await fetch(`${CODA_API_BASE}${path}`, {
     ...options,
@@ -70,13 +92,23 @@ function rowToStatusUpdate(row: Record<string, unknown>): StatusUpdate {
 // --- Public API ---
 
 export async function listProjects(): Promise<Omit<Project, "statusUpdates">[]> {
+  const cacheKey = "projects:list";
+  const cached = getCached<Omit<Project, "statusUpdates">[]>(cacheKey);
+  if (cached) return cached;
+
   const data = await codaFetch(
     `/docs/${CODA_DOC_ID}/tables/${TABLES.ALL_PROJECTS}/rows?valueFormat=rich&limit=200`
   );
-  return data.items.map(rowToProject);
+  const result = data.items.map(rowToProject);
+  setCache(cacheKey, result);
+  return result;
 }
 
 export async function getProject(id: string): Promise<Project> {
+  const cacheKey = `projects:${id}`;
+  const cached = getCached<Project>(cacheKey);
+  if (cached) return cached;
+
   const [rowData, statusData] = await Promise.all([
     codaFetch(
       `/docs/${CODA_DOC_ID}/tables/${TABLES.ALL_PROJECTS}/rows/${id}?valueFormat=rich`
@@ -94,7 +126,9 @@ export async function getProject(id: string): Promise<Project> {
     .filter((u) => u.initiativeId === project.name)
     .sort((a, b) => b.date.localeCompare(a.date));
 
-  return { ...project, statusUpdates: projectUpdates };
+  const result = { ...project, statusUpdates: projectUpdates };
+  setCache(cacheKey, result);
+  return result;
 }
 
 export async function getActiveProjects(): Promise<Omit<Project, "statusUpdates">[]> {
@@ -118,6 +152,7 @@ export async function createProject(req: CreateProjectRequest): Promise<{ id: st
     { method: "POST", body: JSON.stringify({ rows: [{ cells }] }) }
   );
 
+  invalidateCache("projects:");
   return { id: data.addedRowIds?.[0] || "" };
 }
 
@@ -135,6 +170,7 @@ export async function updateProject(id: string, req: UpdateProjectRequest): Prom
     `/docs/${CODA_DOC_ID}/tables/${TABLES.ALL_PROJECTS}/rows/${id}`,
     { method: "PUT", body: JSON.stringify({ row: { cells: Object.entries(values).map(([column, value]) => ({ column, value })) } }) }
   );
+  invalidateCache("projects:");
 }
 
 export async function createStatusUpdate(req: CreateStatusUpdateRequest): Promise<void> {
@@ -149,34 +185,53 @@ export async function createStatusUpdate(req: CreateStatusUpdateRequest): Promis
     `/docs/${CODA_DOC_ID}/tables/${TABLES.ALL_STATUS_UPDATES}/rows`,
     { method: "POST", body: JSON.stringify({ rows: [{ cells }] }) }
   );
+  invalidateCache("projects:");
 }
 
 export async function listStages(): Promise<LookupItem[]> {
+  const cacheKey = "lookups:stages";
+  const cached = getCached<LookupItem[]>(cacheKey);
+  if (cached) return cached;
+
   const data = await codaFetch(
     `/docs/${CODA_DOC_ID}/tables/${TABLES.STAGES}/rows?valueFormat=simple&limit=50`
   );
-  return data.items.map((row: Record<string, unknown>) => ({
+  const result = data.items.map((row: Record<string, unknown>) => ({
     id: row.id as string,
     name: row.name as string,
   }));
+  setCache(cacheKey, result);
+  return result;
 }
 
 export async function listTags(): Promise<LookupItem[]> {
+  const cacheKey = "lookups:tags";
+  const cached = getCached<LookupItem[]>(cacheKey);
+  if (cached) return cached;
+
   const data = await codaFetch(
     `/docs/${CODA_DOC_ID}/tables/${TABLES.TAGS}/rows?valueFormat=simple&limit=50`
   );
-  return data.items.map((row: Record<string, unknown>) => ({
+  const result = data.items.map((row: Record<string, unknown>) => ({
     id: row.id as string,
     name: row.name as string,
   }));
+  setCache(cacheKey, result);
+  return result;
 }
 
 export async function listStatuses(): Promise<LookupItem[]> {
+  const cacheKey = "lookups:statuses";
+  const cached = getCached<LookupItem[]>(cacheKey);
+  if (cached) return cached;
+
   const data = await codaFetch(
     `/docs/${CODA_DOC_ID}/tables/${TABLES.STATUSES}/rows?valueFormat=simple&limit=50`
   );
-  return data.items.map((row: Record<string, unknown>) => ({
+  const result = data.items.map((row: Record<string, unknown>) => ({
     id: row.id as string,
     name: row.name as string,
   }));
+  setCache(cacheKey, result);
+  return result;
 }

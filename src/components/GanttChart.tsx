@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Gantt, Task, ViewMode } from "gantt-task-react";
+import "gantt-task-react/dist/index.css";
 import type { Project } from "@/lib/types";
 
 const stageColors: Record<string, string> = {
-  Active: "#22c55e",
-  Planned: "#3b82f6",
+  Active: "#3b82f6",
+  Planned: "#a78bfa",
   Idea: "#eab308",
-  Complete: "#9ca3af",
+  Complete: "#22c55e",
   Blocked: "#ef4444",
   Incomplete: "#f97316",
 };
@@ -18,53 +20,55 @@ interface Props {
 }
 
 export function GanttChart({ projects }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const ganttRef = useRef<unknown>(null);
   const router = useRouter();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState(0);
 
   useEffect(() => {
-    if (!containerRef.current || projects.length === 0) return;
+    const el = containerRef.current;
+    if (!el) return;
+    const obs = new ResizeObserver(([entry]) => {
+      setHeight(Math.floor(entry.contentRect.height));
+    });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
-    // Dynamic import to avoid SSR issues
-    import("frappe-gantt").then(({ default: Gantt }) => {
-      // Clear previous
-      containerRef.current!.innerHTML = "";
-
-      const tasks = projects
+  const tasks: Task[] = useMemo(
+    () =>
+      [...projects]
         .filter((p) => p.startDate && p.endDate)
+        .sort((a, b) => b.endDate!.localeCompare(a.endDate!))
         .map((p) => ({
           id: p.id,
           name: p.name,
-          start: p.startDate,
-          end: p.endDate,
+          start: new Date(p.startDate!),
+          end: new Date(p.endDate!),
+          type: "task" as const,
           progress: p.stage === "Complete" ? 100 : 0,
-          custom_class: `stage-${p.stage.toLowerCase()}`,
-        }));
+          isDisabled: true,
+          styles: {
+            backgroundColor: stageColors[p.stage] ?? "#6b7280",
+            progressColor: stageColors[p.stage] ?? "#6b7280",
+          },
+        })),
+    [projects]
+  );
 
-      if (tasks.length === 0) return;
-
-      ganttRef.current = new Gantt(containerRef.current!, tasks, {
-        view_mode: "Week",
-        readonly: true,
-        on_click: (task: { id: string }) => {
-          router.push(`/projects/${task.id}`);
-        },
-      });
-    });
-  }, [projects, router]);
+  if (tasks.length === 0) return null;
 
   return (
-    <>
-      <style>{`
-        ${Object.entries(stageColors)
-          .map(
-            ([stage, color]) =>
-              `.stage-${stage.toLowerCase()} .bar { fill: ${color} !important; }
-               .stage-${stage.toLowerCase()} .bar-progress { fill: ${color} !important; }`
-          )
-          .join("\n")}
-      `}</style>
-      <div ref={containerRef} className="overflow-x-auto" />
-    </>
+    <div ref={containerRef} className="flex-1 min-h-0">
+      {height > 0 && (
+        <Gantt
+          tasks={tasks}
+          viewMode={ViewMode.Week}
+          onClick={(task) => router.push(`/projects/${task.id}`)}
+          listCellWidth=""
+          ganttHeight={height}
+          columnWidth={50}
+        />
+      )}
+    </div>
   );
 }
